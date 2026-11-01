@@ -1,0 +1,72 @@
+{
+  "name": "yanshun-skills",
+  "owner": {
+    "name": "yanshun86"
+  },
+  "metadata": {
+    "description": "言顺的经营判断工具箱：3 个判断卡，来自一线操盘与亏损的真实样本。",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ys",
+      "description": "言顺经营判断入口。用户面对\"这个项目还要不要继续\"\"一直在做但就是没结果\"\"有业务有订单账上却越来越紧\"这类经营困境，不确定该用哪张判断工具，或第一次使用本工具包、想先看有哪些判断能力时使用。负责选出该用哪一个并说明理由，需要时在当前对话直接执行那一个；只想要推荐时交付推荐即停。",
+      "source": "./",
+      "strict": true,
+      "version": "0.1.0",
+      "category": "business-judgment",
+      "keywords": [
+        "business",
+        "judgment",
+        "stop-loss",
+        "cashflow",
+        "router",
+        "chinese"
+      ]
+    },
+    {
+      "name": "ys-stop-loss",
+      "description": "止损判断三问。用户不确定一段投入、一个项目、一条业务线、一段合作要不要继续，反复\"再撑一下\"却说不清在等什么信号，或想判断自己是在坚持还是在重复错误时使用。不适用于创业早期可预期的投入期亏损。",
+      "source": "./skills/ys-stop-loss",
+      "strict": true,
+      "version": "0.1.0",
+      "category": "business-judgment",
+      "keywords": [
+        "stop-loss",
+        "decision",
+        "sunk-cost",
+        "chinese"
+      ]
+    },
+    {
+      "name": "ys-safe-vs-key",
+      "description": "安全动作 vs 关键动作。用户抱怨\"一直在做、做了很多、就是没结果\"，或想复盘时间与精力为什么没有转化，或刚发现自己忙的全是不会被拒绝的事时使用。用来定位\"唯一能让事情发生变化、但可能被拒绝\"的那个动作。",
+      "source": "./skills/ys-safe-vs-key",
+      "strict": true,
+      "version": "0.1.0",
+      "category": "business-judgment",
+      "keywords": [
+        "productivity",
+        "sales",
+        "review",
+        "self-diagnosis",
+        "chinese"
+      ]
+    },
+    {
+      "name": "ys-cashflow-signals",
+      "description": "现金流断裂前的中早期信号。用户说\"有业务有订单，账上却越来越紧\"、发工资开始拖、用个人钱补公司、回款变慢、或想判断自己的公司走到哪一阶段时使用。用来对照五个信号，判断处于投入期还是消耗期。",
+      "source": "./skills/ys-cashflow-signals",
+      "strict": true,
+      "version": "0.1.0",
+      "category": "business-judgment",
+      "keywords": [
+        "cashflow",
+        "operations",
+        "risk",
+        "sme",
+        "chinese"
+      ]
+    }
+  ]
+}
