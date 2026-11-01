@@ -4,7 +4,7 @@
 
 言顺的经营判断工具箱。三个判断卡，可安装到支持 Skills 的 Agent 中使用。
 
-作者：言顺（GitHub [@yanshun86](https://github.com/yanshun86)）
+作者：言顺 · GitHub [@yanshun86](https://github.com/yanshun86) · X [@GYanshun53764](https://x.com/GYanshun53764)
 
 ---
 
