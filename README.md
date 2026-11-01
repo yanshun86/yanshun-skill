@@ -1,5 +1,9 @@
 # yanshun-skill
 
+[![skills.sh](https://skills.sh/b/yanshun86/yanshun-skill)](https://skills.sh/b/yanshun86/yanshun-skill)
+[![Version](https://img.shields.io/badge/version-0.1.0-2563EB.svg)](VERSION)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-16A34A.svg)](LICENSE)
+
 言顺的经营判断工具箱。三个判断，可安装到 78 个 Agent 里直接用。
 
 作者：言顺 · GitHub [@yanshun86](https://github.com/yanshun86) · X [@GYanshun53764](https://x.com/GYanshun53764)
