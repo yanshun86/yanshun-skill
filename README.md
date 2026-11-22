@@ -1,16 +1,28 @@
 # yanshun-skill
 
 [![skills.sh](https://skills.sh/b/yanshun86/yanshun-skill)](https://skills.sh/b/yanshun86/yanshun-skill)
-[![Version](https://img.shields.io/badge/version-0.1.0-2563EB.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-0.2.0-2563EB.svg)](VERSION)
 [![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-16A34A.svg)](LICENSE)
 
-言顺的经营判断工具箱。三个判断，可安装到 78 个 Agent 里直接用。
+言顺的实战 Skill 工具箱（持续更新）—— 沉淀一线**经营判断卡**与 **AI 内容/视频生产工作流**，可安装到支持 Skills 的各类 Agent（Claude Code / Codex / Antigravity 等）中直接使用。
 
 作者：言顺 · GitHub [@yanshun86](https://github.com/yanshun86) · X [@GYanshun53764](https://x.com/GYanshun53764)
 
 ---
 
-## 这是什么
+## 技能模块总览
+
+| 模块 | Skill | 一句话用途 | 详细文档 |
+|:--|:--|:--|:--|
+| **经营判断** | `ys` | 主入口：按当前经营困境自动选出该用哪张判断卡 | [`skills/ys`](skills/ys/SKILL.md) |
+| **经营判断** | `ys-stop-loss` | 止损判断三问：判断投入/项目/合作还要不要继续 | [`skills/ys-stop-loss`](skills/ys-stop-loss/SKILL.md) |
+| **经营判断** | `ys-safe-vs-key` | 安全动作 vs 关键动作：定位唯一能带来转化的动作 | [`skills/ys-safe-vs-key`](skills/ys-safe-vs-key/SKILL.md) |
+| **经营判断** | `ys-cashflow-signals` | 现金流断裂前 5 个中早期信号：区分投入期还是消耗期 | [`skills/ys-cashflow-signals`](skills/ys-cashflow-signals/SKILL.md) |
+| **视频工作流** | `swiss-grid-video` | 9:16 瑞士网格极简科普动效视频（含免费 Edge / 本地 MLX 克隆 / 豆包 ICL 2.0 三套配音指南） | [`skills/swiss-grid-video`](skills/swiss-grid-video/README.md) |
+
+---
+
+## 一、经营判断工具箱（这是什么）
 
 三个判断卡，来自一线的操盘和亏损，不是理论：
 
