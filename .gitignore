@@ -4,6 +4,10 @@
 # 本地 Agent 配置，不入库
 .claude/
 .claude-plugin/*.local.json
+.env
+**/.env
+**/config.json
+**/assets/avatar.*
 
 # 系统与编辑器
 __pycache__/

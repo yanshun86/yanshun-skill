@@ -247,6 +247,7 @@ skills/
   ys-stop-loss/            止损判断三问
   ys-safe-vs-key/          安全动作 vs 关键动作
   ys-cashflow-signals/     现金流断裂前的中早期信号
+  swiss-grid-video/        9:16 瑞士网格科普动效视频工作流（含免费/克隆三套配音指南）
 ```
 
 ---

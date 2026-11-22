@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1080px; height: 1920px; overflow: hidden;
+    background-color: #F8F6EE;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", -apple-system, sans-serif;
+    color: #111111;
+    -webkit-font-smoothing: antialiased;
+  }
+  .camera-world {
+    position: absolute; inset: 0;
+    background-color: #F8F6EE;
+    background-image:
+      linear-gradient(to right, rgba(206, 196, 174, 0.42) 1.5px, transparent 1.5px),
+      linear-gradient(to bottom, rgba(206, 196, 174, 0.42) 1.5px, transparent 1.5px);
+    background-size: 60px 60px;
+    transform-origin: 540px 960px;
+    will-change: transform;
+  }
+  #world-svg {
+    position: absolute; left: 0; top: 0;
+    width: 1080px; height: 1920px;
+    overflow: visible;
+  }
+
+  .hud {
+    position: absolute; inset: 0;
+    padding: 52px 50px 52px 50px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    pointer-events: none;
+  }
+  .hud-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .brand-pill {
+    display: inline-flex; align-items: center; gap: 14px;
+    background: rgba(248, 246, 238, 0.92);
+    padding: 10px 22px 10px 10px;
+    border-radius: 16px;
+    border: 2px solid rgba(17, 17, 17, 0.10);
+  }
+  .ep-badge {
+    width: 44px; height: 44px; border-radius: 10px; background: #111111; color: #FFFFFF;
+    font-size: 22px; font-weight: 900; display: flex; align-items: center; justify-content: center;
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-name { font-size: 26px; font-weight: 900; color: #111111; line-height: 1.1; }
+  .brand-sub { font-size: 17px; font-weight: 800; color: #E8431A; letter-spacing: 2px; margin-top: 2px; }
+
+  .pip-host {
+    position: relative; width: 212px; height: 212px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pip-ring-outer, .pip-ring-inner { position: absolute; border-radius: 50%; }
+  .pip-ring-outer { width: 196px; height: 196px; border: 4px solid #E8431A; opacity: 0; }
+  .pip-ring-inner { width: 196px; height: 196px; background: rgba(232, 67, 26, 0.14); opacity: 0; }
+  .pip-avatar {
+    position: relative; width: 184px; height: 184px; border-radius: 50%;
+    overflow: hidden; border: 5px solid #111111; background: #111111;
+    box-shadow: 0 12px 32px rgba(17, 17, 17, 0.18);
+  }
+  .pip-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .pip-eq {
+    position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+    background: #111111; color: #FFFFFF; padding: 5px 16px; border-radius: 999px;
+    display: flex; align-items: center; gap: 4px; height: 34px; white-space: nowrap;
+  }
+  .pip-eq-bar { width: 4px; height: 6px; border-radius: 2px; background: #E8431A; }
+  .pip-eq-label { font-size: 18px; font-weight: 800; margin-left: 5px; letter-spacing: 1.2px; }
+
+  .hud-bottom { display: flex; flex-direction: column; gap: 20px; }
+  .subtitle-wrap { height: 132px; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .subtitle-text {
+    display: inline-block; font-size: 44px; font-weight: 900; color: #111111; line-height: 1.35;
+    background: rgba(248, 246, 238, 0.96); padding: 14px 30px; border-radius: 20px;
+    border: 3px solid #111111; box-shadow: 0 8px 24px rgba(17, 17, 17, 0.10);
+  }
+  .subtitle-text:empty { display: none; }
+  .progress-track { width: 100%; height: 5px; background: #DDD7C5; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0%; background: #E8431A; border-radius: 3px; }
+  .footer-meta { display: flex; justify-content: space-between; font-size: 22px; font-weight: 700; color: #55524B; }
+</style>
+</head>
+<body>
+  <div class="camera-world" id="camera-world">
+    <svg id="world-svg" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="hud">
+    <div class="hud-top">
+      <div class="brand-pill">
+        <div class="ep-badge" id="ep-badge">01</div>
+        <div class="brand-text">
+          <span class="brand-name">你的账号名</span>
+          <span class="brand-sub" id="brand-sub">AI WORKFLOW</span>
+        </div>
+      </div>
+      <div class="pip-host">
+        <div class="pip-ring-outer" id="pip-outer"></div>
+        <div class="pip-ring-inner" id="pip-inner"></div>
+        <div class="pip-avatar"><img id="avatar-img" /></div>
+        <div class="pip-eq">
+          <div class="pip-eq-bar" id="eq0"></div>
+          <div class="pip-eq-bar" id="eq1"></div>
+          <div class="pip-eq-bar" id="eq2"></div>
+          <div class="pip-eq-bar" id="eq3"></div>
+          <span class="pip-eq-label">主讲人</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div class="subtitle-wrap"><div class="subtitle-text" id="subtitle-text"></div></div>
+      <div>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="footer-meta">
+          <span>每天一个AI实战工作流</span>
+          <span>@YOURHANDLE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * clamp(t);
+const easeOutCubic = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const easeInOutCubic = (x) => { const t = clamp(x); return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; };
+
+function spring(dt, stiffness = 190, damping = 16) {
+  if (dt <= 0) return 0;
+  const omega = Math.sqrt(stiffness);
+  const zeta = damping / (2 * omega);
+  if (zeta < 1) {
+    const wd = omega * Math.sqrt(1 - zeta * zeta);
+    return 1 - Math.exp(-zeta * omega * dt) * (Math.cos(wd * dt) + (zeta * omega / wd) * Math.sin(wd * dt));
+  }
+  return 1 - Math.exp(-omega * dt) * (1 + omega * dt);
+}
+
+const R = "#E8431A", K = "#111111", W = "#FFFFFF", G = "#5C5952", BG = "#EFECE0";
+
+function sceneHeader(eyebrow, title, lt) {
+  const sp = spring(lt, 210, 18);
+  return `
+    <g transform="translate(0, ${((1 - sp) * 32).toFixed(1)})" opacity="${clamp(sp)}">
+      <text x="64" y="330" font-size="27" font-weight="900" fill="${R}" letter-spacing="3">${eyebrow}</text>
+      <text x="64" y="408" font-size="60" font-weight="900" fill="${K}">${title}</text>
+    </g>
+  `;
+}
+
+function hardNote(y, tag, text, sp) {
+  return `
+    <g transform="translate(540, ${y + 68}) scale(${(0.86 + 0.14 * sp).toFixed(3)}) translate(-540, ${-(y + 68)})" opacity="${clamp(sp)}">
+      <rect x="64" y="${y}" width="952" height="136" rx="28" fill="#FFF4F0" stroke="${R}" stroke-width="4.5"/>
+      <rect x="92" y="${y + 34}" width="144" height="68" rx="18" fill="${R}"/>
+      <text x="164" y="${y + 79}" text-anchor="middle" font-size="30" font-weight="900" fill="${W}">${tag}</text>
+      <text x="260" y="${y + 80}" font-size="32" font-weight="800" fill="${K}">${text}</text>
+    </g>
+  `;
+}
+
+function renderWorld(id, lt, dur, p) {
+  let camScale = 1.0, camX = 0, camY = 0;
+  // Subtle living camera drift on every scene (enter push-in + gentle settle)
+  const enterZoom = lerp(1.045, 1.0, easeOutCubic(lt / 0.65));
+  const exitZoom = p > 0.94 ? lerp(1.0, 0.97, (p - 0.94) / 0.06) : 1.0;
+  camScale = enterZoom * exitZoom;
+
+  let svg = "";
+
+  // ==================== s01: Remotion 3-Act Opener (scaled to exact audio duration, sight leads sound!) ====================
+  if (id === "s01") {
+    // Map actual sceneDur (e.g. 14.02s) cleanly onto our 15.34s animation timeline, shifted +0.35s ahead so sight leads sound!
+    const t = Math.min(15.34, (lt + 0.35) * (15.34 / Math.max(1, dur)));
+    if (t < 2.2) {
+      camScale = lerp(1.16, 1.08, easeInOutCubic(t / 2.2));
+      camY = lerp(60, 20, easeInOutCubic(t / 2.2));
+    } else if (t < 2.65) {
+      const sh = Math.exp(-(t - 2.2) * 10);
+      camScale = 1.08 + sh * 0.05;
+      camX = Math.sin((t - 2.2) * 75) * 18 * sh;
+      camY = 20 + Math.cos((t - 2.2) * 65) * 14 * sh;
+    } else if (t < 5.0) {
+      camScale = lerp(1.08, 1.0, easeInOutCubic((t - 2.65) / 1.0));
+      camY = lerp(20, 0, easeInOutCubic((t - 2.65) / 1.0));
+    } else if (t < 9.0) {
+      camScale = lerp(1.0, 1.03, easeInOutCubic((t - 5.0) / 3.0));
+    } else {
+      camScale = lerp(1.03, 0.98, easeInOutCubic((t - 9.0) / 1.2));
+    }
+
+    if (t < 9.5) {
+      const actFade = t > 8.85 ? clamp(1 - (t - 8.85) / 0.55) : 1;
+      const promptSp = spring(t - 0.05, 190, 17);
+      const promptY = lerp(740, 325, easeInOutCubic((t - 2.05) / 0.55));
+      const typedText = "帮我做一份 PPT";
+      const shownText = typedText.slice(0, Math.floor(clamp((t - 0.25) / 1.15) * typedText.length));
+      const cursorBlink = Math.floor(t * 4) % 2 === 0 && t < 1.85 ? 1 : 0;
+      const btnPress = (t >= 1.58 && t <= 1.80) ? 0.86 : 1.0;
+
+      svg += `<g opacity="${actFade}">
+        <g transform="translate(540, ${promptY}) scale(${(0.75 + 0.25 * promptSp).toFixed(3)}) translate(-540, ${-promptY})" opacity="${clamp(promptSp)}">
+          <rect x="70" y="${promptY - 76}" width="940" height="152" rx="76" fill="${W}" stroke="${K}" stroke-width="5"/>
+          <text x="140" y="${promptY + 18}" font-size="48" font-weight="900" fill="${K}">${shownText}<tspan fill="${R}" opacity="${cursorBlink}">|</tspan></text>
+          <g transform="translate(928, ${promptY}) scale(${btnPress}) translate(-928, ${-promptY})">
+            <circle cx="928" cy="${promptY}" r="50" fill="${t >= 1.58 ? R : K}"/>
+            <path d="M912 ${promptY} L944 ${promptY} M930 ${promptY - 14} L944 ${promptY} L930 ${promptY + 14}" stroke="${W}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </g>
+        </g>`;
+
+      if (t >= 2.25) {
+        const slideSp = spring(t - 2.28, 170, 16);
+        const sweep = easeInOutCubic((t - 5.05) / 1.55);
+        const sweepY = lerp(520, 1400, sweep);
+        const isCleaned = t >= 6.45;
+        svg += `<g transform="translate(540, 960) scale(${(0.7 + 0.3 * slideSp).toFixed(3)}) translate(-540, -960)" opacity="${clamp(slideSp)}">
+          <rect x="70" y="510" width="940" height="900" rx="34" fill="${W}" stroke="${isCleaned ? K : R}" stroke-width="5"/>
+          <rect x="70" y="510" width="940" height="74" rx="34" fill="${isCleaned ? K : '#FFF0EB'}"/>
+          <rect x="70" y="550" width="940" height="34" fill="${isCleaned ? K : '#FFF0EB'}"/>
+          <text x="114" y="558" font-size="28" font-weight="900" fill="${isCleaned ? W : R}">${isCleaned ? '✓ 拆解重构后：干净、可验证、直接上台' : '✕ AI 一键盲写结果：失控现场'}</text>`;
+
+        const junk = [
+          { x: 110, y: 640, w: 460, rot: -3.5, label: "全面赋能生态闭环抓手...", tag: "空话套话", delay: 2.35 },
+          { x: 520, y: 710, w: 450, rot: 4.2, label: "效率提升 98.7%（编的）", tag: "数字没出处", delay: 2.55 },
+          { x: 96,  y: 860, w: 890, rot: -1.8, label: "文字溢出边框排版重叠全乱套...", tag: "排版失控", delay: 2.75 },
+          { x: 140, y: 1030, w: 410, rot: 3.0, label: "多维度协同降本增效...", tag: "AI 腔", delay: 2.95 },
+          { x: 540, y: 1120, w: 420, rot: -4.0, label: "1.背景 2.现状 3.展望 4.总结", tag: "废话目录", delay: 3.10 },
+        ];
+        junk.forEach((it, idx) => {
+          const sp = spring(t - it.delay, 220, 14);
+          const hit = sweep > 0 && sweepY > it.y + 40;
+          const fallT = hit ? clamp((t - (5.05 + ((it.y - 520) / 880) * 1.55)) / 0.55) : 0;
+          const fallY = fallT * fallT * 460;
+          const fallRot = it.rot + (idx % 2 === 0 ? -1 : 1) * fallT * 28;
+          const op = clamp(sp) * clamp(1 - fallT * 1.3);
+          if (op > 0.01) {
+            svg += `<g transform="translate(${it.x + it.w/2}, ${it.y + 54 + fallY}) rotate(${fallRot.toFixed(1)}) scale(${(0.5 + 0.5 * sp).toFixed(3)}) translate(${-(it.x + it.w/2)}, ${-(it.y + 54)})" opacity="${op.toFixed(3)}">
+              <rect x="${it.x}" y="${it.y}" width="${it.w}" height="108" rx="20" fill="${BG}" stroke="${R}" stroke-width="3.5"/>
+              <rect x="${it.x + 18}" y="${it.y - 18}" width="150" height="36" rx="18" fill="${R}"/>
+              <text x="${it.x + 93}" y="${it.y + 8}" text-anchor="middle" font-size="20" font-weight="900" fill="${W}">✕ ${it.tag}</text>
+              <text x="${it.x + 24}" y="${it.y + 72}" font-size="32" font-weight="800" fill="${G}">${it.label}</text>
+            </g>`;
+          }
+        });
+        if (t >= 6.45) {
+          const c1 = spring(t - 6.55, 200, 16), c2 = spring(t - 6.85, 200, 16), c3 = spring(t - 7.15, 200, 16);
+          svg += `<g opacity="${clamp(c1)}" transform="translate(0, ${((1 - c1) * 40).toFixed(1)})">
+              <rect x="122" y="644" width="210" height="48" rx="24" fill="${R}"/>
+              <text x="227" y="677" text-anchor="middle" font-size="25" font-weight="900" fill="${W}">一页一个结论</text>
+              <text x="122" y="766" font-size="52" font-weight="900" fill="${K}">拆开 4 步，质量立刻稳</text>
+            </g>
+            <g opacity="${clamp(c2)}" transform="translate(0, ${((1 - c2) * 35).toFixed(1)})">
+              <rect x="122" y="838" width="836" height="190" rx="26" fill="${BG}" stroke="${K}" stroke-width="3.5"/>
+              <text x="164" y="914" font-size="38" font-weight="900" fill="${K}">① 只留 3 条硬干货（≤ 30 字）</text>
+              <text x="164" y="982" font-size="32" font-weight="700" fill="${G}">② 每个数字附真实来源链接 · 拒绝编造</text>
+            </g>
+            <g opacity="${clamp(c3)}" transform="translate(0, ${((1 - c3) * 35).toFixed(1)})">
+              <rect x="122" y="1068" width="836" height="260" rx="26" fill="#FFF4F0" stroke="${R}" stroke-width="4"/>
+              <text x="164" y="1148" font-size="38" font-weight="900" fill="${R}">③ 视觉留白 + 逐页转图自检</text>
+              <rect x="164" y="1194" width="230" height="84" rx="16" fill="${W}" stroke="${K}" stroke-width="3"/>
+              <text x="279" y="1248" text-anchor="middle" font-size="30" font-weight="800" fill="${K}">配色 ≤ 3 色</text>
+              <rect x="424" y="1194" width="230" height="84" rx="16" fill="${W}" stroke="${K}" stroke-width="3"/>
+              <text x="539" y="1248" text-anchor="middle" font-size="30" font-weight="800" fill="${K}">零 AI 腔</text>
+              <rect x="684" y="1194" width="230" height="84" rx="16" fill="${R}"/>
+              <text x="799" y="1248" text-anchor="middle" font-size="30" font-weight="900" fill="${W}">零文字溢出</text>
+            </g>`;
+        }
+        if (sweep > 0.01 && sweep < 0.99) {
+          svg += `<rect x="52" y="${sweepY - 6}" width="976" height="12" rx="6" fill="${R}"/>
+            <rect x="52" y="${sweepY - 46}" width="976" height="40" fill="rgba(232,67,26,0.16)"/>`;
+        }
+        svg += `</g>`;
+      }
+      svg += `</g>`;
+    }
+
+    if (t >= 8.95) {
+      const a3 = easeOutCubic((t - 8.95) / 0.45);
+      const titleSp = spring(t - 9.05, 190, 16);
+      const nodes = [
+        { y: 630, n: "01", step: "找资料", check: "✓ 必须带来源链接", t0: 10.15 },
+        { y: 840, n: "02", step: "提炼逻辑", check: "✓ 单页 ≤30 字 · 去 AI 腔", t0: 11.00 },
+        { y: 1050, n: "03", step: "锁定风格", check: "✓ 配色 ≤3 色 · 不换版", t0: 11.85 },
+        { y: 1260, n: "04", step: "排版直出", check: "✓ 转图查溢出 · 5 分钟终审", t0: 12.70 },
+      ];
+      const cableProg = easeInOutCubic((t - 9.6) / 3.4);
+      const cableEnd = 630 + 630 * cableProg;
+      svg += `<g opacity="${a3}">
+        <g transform="translate(0, ${((1 - titleSp) * 40).toFixed(1)})" opacity="${clamp(titleSp)}">
+          <text x="70" y="420" font-size="30" font-weight="900" fill="${R}" letter-spacing="3">CORRECT WORKFLOW</text>
+          <text x="70" y="504" font-size="68" font-weight="900" fill="${K}">正确拆法 × 4 项硬验收</text>
+        </g>
+        <line x1="156" y1="630" x2="156" y2="1260" stroke="#DDD7C5" stroke-width="10" stroke-linecap="round"/>
+        <line x1="156" y1="630" x2="156" y2="${cableEnd.toFixed(1)}" stroke="${R}" stroke-width="10" stroke-linecap="round"/>`;
+      if (cableProg > 0.02 && cableProg < 0.99) svg += `<circle cx="156" cy="${cableEnd.toFixed(1)}" r="16" fill="${R}"/>`;
+      nodes.forEach((nd, i) => {
+        const sp = spring(t - nd.t0, 210, 15);
+        svg += `<g transform="translate(540, ${nd.y}) scale(${(0.82 + 0.18 * sp).toFixed(3)}) translate(-540, ${-nd.y})" opacity="${clamp(sp)}">
+          <circle cx="156" cy="${nd.y}" r="42" fill="${t >= nd.t0 ? R : K}"/>
+          <text x="156" y="${nd.y + 13}" text-anchor="middle" font-size="32" font-weight="900" fill="${W}">${nd.n}</text>
+          <rect x="234" y="${nd.y - 78}" width="776" height="156" rx="28" fill="${W}" stroke="${i === 3 ? R : K}" stroke-width="4.5"/>
+          <text x="278" y="${nd.y - 10}" font-size="44" font-weight="900" fill="${K}">${nd.step}</text>
+          <rect x="278" y="${nd.y + 12}" width="470" height="48" rx="24" fill="#FFF4F0"/>
+          <text x="304" y="${nd.y + 45}" font-size="28" font-weight="800" fill="${R}">${nd.check}</text>
+        </g>`;
+      });
+      svg += `</g>`;
+    }
+  }
+
+  // ==================== s02: Exploding 5-in-1 tangle into 6-step spring pipeline ====================
+  else if (id === "s02") {
+    svg += sceneHeader("CORE MINDSET / 底层心法", "别把五件事混成一步", lt);
+    const splitT = easeInOutCubic((p - 0.34) / 0.20);
+    const shake = p > 0.18 && p < 0.36 ? Math.sin(lt * 55) * 10 * (1 - (p - 0.18) / 0.18) : 0;
+    svg += `
+      <g transform="translate(${shake.toFixed(1)}, 0)" opacity="${(1 - 0.55 * splitT).toFixed(3)}">
+        <rect x="64" y="476" width="952" height="176" rx="28" fill="${BG}" stroke="${R}" stroke-width="4.5" stroke-dasharray="14 10"/>
+        <text x="540" y="554" text-anchor="middle" font-size="38" font-weight="900" fill="${K}">找料 + 提炼 + 逻辑 + 风格 + 排版</text>
+        <text x="540" y="614" text-anchor="middle" font-size="30" font-weight="800" fill="${R}">混成一步 = 全部失控</text>
+      </g>
+      <line x1="540" y1="660" x2="540" y2="${(660 + 62 * splitT).toFixed(1)}" stroke="${R}" stroke-width="7" opacity="${splitT}"/>
+      <polygon points="524,714 556,714 540,734" fill="${R}" opacity="${splitT > 0.8 ? 1 : 0}"/>
+    `;
+    const cards = [
+      { n: "01", t: "收集资料", d: "联网三维度", s: 0.40 },
+      { n: "02", t: "提炼观点", d: "按听众减法", s: 0.47 },
+      { n: "03", t: "整理逻辑", d: "一页一结论", s: 0.54 },
+      { n: "04", t: "精简打磨", d: "≤30字去AI味", s: 0.61 },
+      { n: "05", t: "锁定风格", d: "≤3色不换版", s: 0.68 },
+      { n: "06", t: "直出验收", d: "代码直出转图", s: 0.75 },
+    ];
+    cards.forEach((c, i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      const x = 64 + col * 492, y = 762 + row * 246;
+      const sp = spring((p - c.s) * dur, 210, 15);
+      svg += `<g transform="translate(${x + 230}, ${y + 104}) scale(${(0.68 + 0.32 * sp).toFixed(3)}) translate(${-(x + 230)}, ${-(y + 104)})" opacity="${clamp(sp)}">
+        <rect x="${x}" y="${y}" width="460" height="214" rx="28" fill="${W}" stroke="${i === 5 ? R : K}" stroke-width="4.5"/>
+        <rect x="${x + 28}" y="${y + 34}" width="84" height="62" rx="16" fill="${i === 5 ? R : K}"/>
+        <text x="${x + 70}" y="${y + 77}" text-anchor="middle" font-size="32" font-weight="900" fill="${W}">${c.n}</text>
+        <text x="${x + 134}" y="${y + 80}" font-size="42" font-weight="900" fill="${K}">${c.t}</text>
+        <text x="${x + 32}" y="${y + 166}" font-size="32" font-weight="600" fill="${G}">${c.d}</text>
+      </g>`;
+    });
+  }
+
+  // ==================== s03: Step 1 Live Search Scanner + 3 Dimensions ====================
+  else if (id === "s03") {
+    svg += sceneHeader("STEP 01 / 资料收集", "手里缺资料，怎么收集？", lt);
+    const barSp = spring(lt - 0.15, 200, 16);
+    const scanX = 96 + ((lt * 340) % 860);
+    const scanOp = p > 0.10 && p < 0.65 ? 0.85 : 0;
+    svg += `
+      <g transform="translate(540, 560) scale(${(0.82 + 0.18 * barSp).toFixed(3)}) translate(-540, -560)" opacity="${clamp(barSp)}">
+        <rect x="64" y="476" width="952" height="168" rx="30" fill="${K}"/>
+        <text x="114" y="552" font-size="42" font-weight="900" fill="${W}">🔍 GPT 联网 / 深度研究模式</text>
+        <text x="114" y="608" font-size="29" font-weight="600" fill="#D5D0C0">别直接要结论，按下面 3 个维度喂问题</text>
+        <rect x="${scanX.toFixed(0)}" y="476" width="8" height="168" fill="${R}" opacity="${scanOp}"/>
+      </g>`;
+    const dims = [
+      { y: 696, n: "01", t: "行业真实数据", d: "市场规模 · 增速 · 权威机构报告", s: 0.22 },
+      { y: 902, n: "02", t: "标杆成功案例", d: "具体公司 · 关键做法 · 量化结果", s: 0.34 },
+      { y: 1108, n: "03", t: "反面踩坑点", d: "常见误区 · 失败复盘 · 避雷证据", s: 0.46 },
+    ];
+    dims.forEach((d) => {
+      const sp = spring((p - d.s) * dur, 200, 15);
+      svg += `<g transform="translate(0, ${((1 - sp) * 44).toFixed(1)})" opacity="${clamp(sp)}">
+        <rect x="64" y="${d.y}" width="952" height="174" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <rect x="96" y="${d.y + 41}" width="92" height="92" rx="22" fill="${R}"/>
+        <text x="142" y="${d.y + 101}" text-anchor="middle" font-size="38" font-weight="900" fill="${W}">${d.n}</text>
+        <text x="220" y="${d.y + 80}" font-size="42" font-weight="900" fill="${K}">${d.t}</text>
+        <text x="220" y="${d.y + 134}" font-size="30" font-weight="600" fill="${G}">${d.d}</text>
+      </g>`;
+    });
+    svg += hardNote(1344, "硬验收", "每个数字必须附来源链接，无出处宁可不用", spring((p - 0.62) * dur, 210, 15));
+  }
+
+  // ==================== s04: Step 2 Falling Inputs into Funnel ====================
+  else if (id === "s04") {
+    svg += sceneHeader("STEP 02 / 信息提炼", "资料太杂，怎么提炼？", lt);
+    const drop = easeInOutCubic((p - 0.14) / 0.22);
+    const pills = [
+      { x: 64, label: "零散聊天记录", dx: 120 },
+      { x: 386, label: "20 页行业 PDF", dx: 0 },
+      { x: 726, label: "截图网页笔记", dx: -120 },
+    ];
+    pills.forEach((pl) => {
+      const sp = spring(lt - 0.1, 190, 16);
+      const y = lerp(476, 650, drop);
+      const op = clamp(sp) * clamp(1 - (drop - 0.6) * 2.5);
+      svg += `<g transform="translate(${(pl.dx * drop).toFixed(1)}, 0)" opacity="${op.toFixed(3)}">
+        <rect x="${pl.x}" y="${y.toFixed(1)}" width="290" height="92" rx="22" fill="${BG}" stroke="#9E9A8E" stroke-width="3.5"/>
+        <text x="${pl.x + 145}" y="${(y + 58).toFixed(1)}" text-anchor="middle" font-size="30" font-weight="800" fill="${G}">${pl.label}</text>
+      </g>`;
+    });
+    const fnSp = spring((p - 0.18) * dur, 190, 16);
+    svg += `<g transform="translate(540, 740) scale(${(0.8 + 0.2 * fnSp).toFixed(3)}) translate(-540, -740)" opacity="${clamp(fnSp)}">
+      <polygon points="84,616 996,616 764,864 316,864" fill="${W}" stroke="${K}" stroke-width="5"/>
+      <text x="540" y="724" text-anchor="middle" font-size="44" font-weight="900" fill="${K}">按听众最关心的 3 个问题</text>
+      <text x="540" y="796" text-anchor="middle" font-size="38" font-weight="900" fill="${R}">做 减 法 提 炼</text>
+    </g>`;
+    const outSp = spring((p - 0.42) * dur, 200, 15);
+    svg += `<g transform="translate(0, ${((1 - outSp) * 44).toFixed(1)})" opacity="${clamp(outSp)}">
+      <rect x="64" y="924" width="952" height="370" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+      <text x="108" y="996" font-size="36" font-weight="900" fill="${R}">✓ 提炼出 3 条决策核心观点</text>
+      <text x="108" y="1072" font-size="34" font-weight="800" fill="${K}">1. 现状卡点是什么（为什么现在要改）</text>
+      <text x="108" y="1148" font-size="34" font-weight="800" fill="${K}">2. 核心方案与收益（值不值得投入）</text>
+      <text x="108" y="1224" font-size="34" font-weight="800" fill="${K}">3. 风险兜底与下一步（立刻怎么落地）</text>
+    </g>`;
+    svg += hardNote(1344, "注意点", "先写清听众是谁 + 听完要做什么决定", spring((p - 0.64) * dur, 210, 15));
+  }
+
+  // ==================== s05: Step 3 Animated Visual-Form Widgets + Counter ====================
+  else if (id === "s05") {
+    svg += sceneHeader("STEP 03 / 逻辑整理", "大纲怎么整理才不枯燥？", lt);
+    const c1 = spring(lt - 0.15, 200, 16);
+    svg += `<g transform="translate(540, 610) scale(${(0.86 + 0.14 * c1).toFixed(3)}) translate(-540, -610)" opacity="${clamp(c1)}">
+      <rect x="64" y="476" width="952" height="270" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+      <rect x="104" y="514" width="228" height="54" rx="27" fill="${R}"/>
+      <text x="218" y="551" text-anchor="middle" font-size="28" font-weight="900" fill="${W}">结论先行原则</text>
+      <text x="104" y="636" font-size="48" font-weight="900" fill="${K}">一页只讲 1 个完整观点</text>
+      <text x="104" y="700" font-size="32" font-weight="600" fill="${G}">页面标题 = 本页结论（别写“项目背景”）</text>
+    </g>`;
+
+    const t1 = spring((p - 0.30) * dur, 210, 15);
+    const t2 = spring((p - 0.42) * dur, 210, 15);
+    const t3 = spring((p - 0.54) * dur, 210, 15);
+    const countVal = (3.2 * easeOutCubic((p - 0.54) / 0.18)).toFixed(1);
+    const pulse = 1 + 0.12 * Math.sin(lt * 8);
+
+    svg += `<text x="68" y="832" font-size="36" font-weight="900" fill="${K}" opacity="${clamp(t1)}">每页提前标注「视觉形式」：</text>
+      <g transform="translate(214, 1060) scale(${(0.75 + 0.25 * t1).toFixed(3)}) translate(-214, -1060)" opacity="${clamp(t1)}">
+        <rect x="64" y="876" width="300" height="384" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <rect x="100" y="936" width="102" height="156" rx="14" fill="${BG}" stroke="${K}" stroke-width="3"/>
+        <rect x="224" y="936" width="102" height="156" rx="14" fill="#FFF0EB" stroke="${R}" stroke-width="3.5"/>
+        <text x="214" y="1166" text-anchor="middle" font-size="38" font-weight="900" fill="${K}">对比表</text>
+        <text x="214" y="1218" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">优劣一眼看穿</text>
+      </g>
+      <g transform="translate(540, 1060) scale(${(0.75 + 0.25 * t2).toFixed(3)}) translate(-540, -1060)" opacity="${clamp(t2)}">
+        <rect x="390" y="876" width="300" height="384" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <circle cx="458" cy="1014" r="28" fill="${K}"/>
+        <line x1="486" y1="1014" x2="512" y2="1014" stroke="${R}" stroke-width="6"/>
+        <circle cx="540" cy="1014" r="${(28 * pulse).toFixed(1)}" fill="${R}"/>
+        <line x1="568" y1="1014" x2="594" y2="1014" stroke="${R}" stroke-width="6"/>
+        <circle cx="622" cy="1014" r="28" fill="${K}"/>
+        <text x="540" y="1166" text-anchor="middle" font-size="38" font-weight="900" fill="${K}">流程图</text>
+        <text x="540" y="1218" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">拆清步骤因果</text>
+      </g>
+      <g transform="translate(866, 1060) scale(${(0.75 + 0.25 * t3).toFixed(3)}) translate(-866, -1060)" opacity="${clamp(t3)}">
+        <rect x="716" y="876" width="300" height="384" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="866" y="1036" text-anchor="middle" font-size="76" font-weight="900" fill="${R}">${countVal}×</text>
+        <text x="866" y="1166" text-anchor="middle" font-size="38" font-weight="900" fill="${K}">数据卡</text>
+        <text x="866" y="1218" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">放大关键证据</text>
+      </g>`;
+    svg += hardNote(1344, "注意点", "拒绝全篇 1·2·3·4 枯燥纯文字清单", spring((p - 0.68) * dur, 210, 15));
+  }
+
+  // ==================== s06: Step 4 Physical Slicing of AI Buzzwords ====================
+  else if (id === "s06") {
+    svg += sceneHeader("STEP 04 / 精简去 AI 味", "逐页打磨，守住两条红线", lt);
+    const r1 = spring((p - 0.10) * dur, 200, 16);
+    const r2 = spring((p - 0.42) * dur, 200, 16);
+    const slice = easeInOutCubic((p - 0.58) / 0.16);
+    const dropT = clamp((p - 0.72) / 0.18);
+
+    svg += `<g transform="translate(540, 680) scale(${(0.86 + 0.14 * r1).toFixed(3)}) translate(-540, -680)" opacity="${clamp(r1)}">
+      <rect x="64" y="476" width="952" height="414" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+      <rect x="104" y="518" width="166" height="56" rx="28" fill="${R}"/>
+      <text x="187" y="557" text-anchor="middle" font-size="28" font-weight="900" fill="${W}">红线 01</text>
+      <text x="296" y="558" font-size="46" font-weight="900" fill="${K}">单页正文 ≤ 30 字</text>
+      <rect x="104" y="616" width="416" height="232" rx="24" fill="${BG}" stroke="${K}" stroke-width="3.5"/>
+      <text x="312" y="694" text-anchor="middle" font-size="38" font-weight="900" fill="${K}">幻灯片上屏</text>
+      <text x="312" y="764" text-anchor="middle" font-size="30" font-weight="800" fill="${R}">只留结论 + 3 个关键词</text>
+      <rect x="556" y="616" width="416" height="232" rx="24" fill="${W}" stroke="#9E9A8E" stroke-width="3.5" stroke-dasharray="10 8"/>
+      <text x="764" y="694" text-anchor="middle" font-size="38" font-weight="900" fill="${G}">演讲者备注区</text>
+      <text x="764" y="764" text-anchor="middle" font-size="30" font-weight="600" fill="${G}">详细口播与数据放这里</text>
+    </g>
+
+    <g transform="translate(540, 1200) scale(${(0.86 + 0.14 * r2).toFixed(3)}) translate(-540, -1200)" opacity="${clamp(r2)}">
+      <rect x="64" y="948" width="952" height="532" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+      <rect x="104" y="992" width="166" height="56" rx="28" fill="${R}"/>
+      <text x="187" y="1031" text-anchor="middle" font-size="28" font-weight="900" fill="${W}">红线 02</text>
+      <text x="296" y="1032" font-size="46" font-weight="900" fill="${K}">删光一切 AI 腔</text>`;
+
+    const words = ["全面赋能", "核心抓手", "生态闭环", "降本增效"];
+    words.forEach((w, i) => {
+      const wx = 104 + i * 222;
+      const dy = dropT * dropT * (140 + i * 30);
+      const rot = (i % 2 === 0 ? -1 : 1) * dropT * 18;
+      svg += `<g transform="translate(${wx + 98}, ${(1142 + dy).toFixed(1)}) rotate(${rot.toFixed(1)}) translate(${-(wx + 98)}, -1142)" opacity="${clamp(1 - dropT * 1.2).toFixed(3)}">
+        <rect x="${wx}" y="1102" width="198" height="80" rx="40" fill="${BG}" stroke="${R}" stroke-width="2.5"/>
+        <text x="${wx + 99}" y="1154" text-anchor="middle" font-size="32" font-weight="800" fill="${G}">${w}</text>
+      </g>`;
+    });
+    svg += `<line x1="104" y1="1142" x2="${(104 + 868 * slice).toFixed(1)}" y2="1142" stroke="${R}" stroke-width="11" stroke-linecap="round" opacity="${(slice * (1 - dropT)).toFixed(3)}"/>
+      <rect x="104" y="1264" width="868" height="164" rx="24" fill="#FFF4F0" stroke="${R}" stroke-width="4"/>
+      <text x="538" y="1338" text-anchor="middle" font-size="40" font-weight="900" fill="${K}">✓ 改成你平时开口讲的大白话</text>
+      <text x="538" y="1392" text-anchor="middle" font-size="28" font-weight="600" fill="${G}">读一遍拗口的句子，一律砍掉重写</text>
+    </g>`;
+  }
+
+  // ==================== s07: Step 5 Style Lock Board ====================
+  else if (id === "s07") {
+    svg += sceneHeader("STEP 05 / 风格锁定", "视觉风格必须提前确认", lt);
+    const a1 = spring((p - 0.10) * dur, 200, 15);
+    const a2 = spring((p - 0.30) * dur, 200, 15);
+    const a3 = spring((p - 0.48) * dur, 200, 15);
+    svg += `
+      <g transform="translate(0, ${((1 - a1) * 38).toFixed(1)})" opacity="${clamp(a1)}">
+        <rect x="64" y="476" width="952" height="248" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="108" y="550" font-size="40" font-weight="900" fill="${K}">01 锁定配色（绝不超过 3 色）</text>
+        <circle cx="156" cy="644" r="36" fill="#F8F6EE" stroke="${K}" stroke-width="4"/>
+        <text x="210" y="656" font-size="32" font-weight="700" fill="${G}">底色</text>
+        <circle cx="396" cy="644" r="36" fill="#111111"/>
+        <text x="450" y="656" font-size="32" font-weight="700" fill="${G}">主字色</text>
+        <circle cx="660" cy="644" r="36" fill="${R}"/>
+        <text x="714" y="656" font-size="34" font-weight="900" fill="${R}">1 个强调色</text>
+      </g>
+      <g transform="translate(0, ${((1 - a2) * 38).toFixed(1)})" opacity="${clamp(a2)}">
+        <rect x="64" y="762" width="952" height="244" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="108" y="836" font-size="40" font-weight="900" fill="${K}">02 锁定字体与字号层级</text>
+        <text x="108" y="942" font-size="52" font-weight="900" fill="${K}">标题 36pt</text>
+        <text x="440" y="942" font-size="38" font-weight="700" fill="${G}">正文 20pt</text>
+        <text x="710" y="942" font-size="28" font-weight="600" fill="#8C887E">注释 14pt</text>
+      </g>
+      <g transform="translate(0, ${((1 - a3) * 38).toFixed(1)})" opacity="${clamp(a3)}">
+        <rect x="64" y="1044" width="952" height="252" rx="28" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="108" y="1118" font-size="40" font-weight="900" fill="${K}">03 按场合锁定视觉气质</text>
+        <rect x="108" y="1166" width="408" height="86" rx="18" fill="#10243E"/>
+        <text x="312" y="1222" text-anchor="middle" font-size="32" font-weight="800" fill="#D6AC67">政企汇报 · 深蓝稳重</text>
+        <rect x="552" y="1166" width="420" height="86" rx="18" fill="${BG}" stroke="${R}" stroke-width="3.5"/>
+        <text x="762" y="1222" text-anchor="middle" font-size="32" font-weight="800" fill="${K}">科技分享 · 浅底网格</text>
+      </g>`;
+    svg += hardNote(1344, "🔒 锁定", "风格一旦确定，整套绝不中途换模板", spring((p - 0.66) * dur, 210, 15));
+  }
+
+  // ==================== s08: Step 6 Solo GPT Code -> .pptx + Live Visual QA Scan ====================
+  else if (id === "s08") {
+    svg += sceneHeader("STEP 06 / 纯 GPT 单兵闭环", "不靠其他工具，GPT 也能直出", lt);
+    const termSp = spring(lt - 0.12, 200, 16);
+    const codeLines = [
+      "from pptx import Presentation",
+      "slide.title = '一页一个核心结论'",
+      "prs.save('output.pptx')  # ✓ 直出",
+    ];
+    const visLines = Math.min(3, Math.floor(clamp((p - 0.12) / 0.22) * 3.5));
+    const arr = easeOutCubic((p - 0.30) / 0.12);
+    const qaSp = spring((p - 0.38) * dur, 200, 15);
+    const scanX = 110 + ((lt * 320) % 820);
+
+    svg += `
+      <g transform="translate(540, 620) scale(${(0.86 + 0.14 * termSp).toFixed(3)}) translate(-540, -620)" opacity="${clamp(termSp)}">
+        <rect x="64" y="472" width="952" height="304" rx="30" fill="${K}"/>
+        <circle cx="114" cy="516" r="10" fill="${R}"/>
+        <circle cx="148" cy="516" r="10" fill="#D6AC67"/>
+        <circle cx="182" cy="516" r="10" fill="#6B675E"/>
+        <text x="220" y="526" font-size="24" font-weight="800" fill="#B8B2A2">GPT 内置 Python / HTML 直出引擎</text>`;
+    for (let i = 0; i < visLines; i++) {
+      svg += `<text x="114" y="${604 + i * 56}" font-family="SF Mono, Menlo, monospace" font-size="30" font-weight="700" fill="${i === 2 ? '#FF7A59' : '#F8F6EE'}">${codeLines[i]}</text>`;
+    }
+    svg += `</g>
+      <line x1="540" y1="784" x2="540" y2="${(784 + 62 * arr).toFixed(1)}" stroke="${R}" stroke-width="6" opacity="${arr}"/>
+      <polygon points="524,838 556,838 540,858" fill="${R}" opacity="${arr > 0.8 ? 1 : 0}"/>
+
+      <g transform="translate(540, 1020) scale(${(0.86 + 0.14 * qaSp).toFixed(3)}) translate(-540, -1020)" opacity="${clamp(qaSp)}">
+        <rect x="64" y="876" width="952" height="278" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="108" y="952" font-size="40" font-weight="900" fill="${K}">纯代码直出，必须加这两步验收：</text>
+        <rect x="108" y="996" width="388" height="106" rx="22" fill="${BG}" stroke="${K}" stroke-width="3.5"/>
+        <text x="302" y="1062" text-anchor="middle" font-size="34" font-weight="800" fill="${K}">锁死边距与字号</text>
+        <text x="540" y="1064" text-anchor="middle" font-size="44" font-weight="900" fill="${R}">+</text>
+        <rect x="584" y="996" width="388" height="106" rx="22" fill="${R}"/>
+        <text x="778" y="1062" text-anchor="middle" font-size="34" font-weight="900" fill="${W}">逐页转图防溢出</text>
+        <rect x="${scanX.toFixed(0)}" y="876" width="6" height="278" fill="${R}" opacity="${p > 0.45 && p < 0.85 ? 0.45 : 0}"/>
+      </g>`;
+    svg += hardNote(1196, "硬验收", "纯代码易重叠，必须逐页转图肉眼/视觉自检", spring((p - 0.56) * dur, 210, 15));
+    const opt = easeOutCubic((p - 0.74) / 0.14);
+    svg += `<g opacity="${opt}">
+      <rect x="64" y="1372" width="952" height="96" rx="48" fill="${BG}" stroke="#B8B2A2" stroke-width="3"/>
+      <text x="540" y="1432" text-anchor="middle" font-size="29" font-weight="700" fill="${G}">备选：赶时间（3 分钟）→ Markdown 进 Gamma / Kimi 套版</text>
+    </g>`;
+  }
+
+  // ==================== s09: Final 5-Min QA Stamps ====================
+  else if (id === "s09") {
+    svg += sceneHeader("FINAL QA / 最后 5 分钟", "出片后人工只盯这 3 处", lt);
+    const items = [
+      { n: "01", t: "改封面与目录页", d: "决定观众前 3 秒的专业第一印象", s: 0.14, chk: 0.28 },
+      { n: "02", t: "核对核心数据口径", d: "逐条核查来源与数字，绝不留错数", s: 0.38, chk: 0.52 },
+      { n: "03", t: "做减法删多余装饰", d: "去掉花哨图标与边框，留白越多越高级", s: 0.62, chk: 0.76 },
+    ];
+    items.forEach((it, i) => {
+      const y = 516 + i * 310;
+      const sp = spring((p - it.s) * dur, 210, 15);
+      const chkSp = spring((p - it.chk) * dur, 260, 14);
+      svg += `<g transform="translate(0, ${((1 - sp) * 44).toFixed(1)})" opacity="${clamp(sp)}">
+        <rect x="64" y="${y}" width="952" height="258" rx="30" fill="${W}" stroke="${i === 1 ? R : K}" stroke-width="4.5"/>
+        <circle cx="168" cy="${y + 129}" r="54" fill="${i === 1 ? R : K}"/>
+        <text x="168" y="${y + 145}" text-anchor="middle" font-size="44" font-weight="900" fill="${W}">${it.n}</text>
+        <text x="256" y="${y + 112}" font-size="46" font-weight="900" fill="${K}">${it.t}</text>
+        <text x="256" y="${y + 178}" font-size="32" font-weight="600" fill="${G}">${it.d}</text>
+        <g transform="translate(932, ${y + 129}) scale(${clamp(chkSp).toFixed(3)}) translate(-932, ${-(y + 129)})" opacity="${clamp(chkSp)}">
+          <circle cx="932" cy="${y + 129}" r="36" fill="${R}"/>
+          <text x="932" y="${y + 142}" text-anchor="middle" font-size="36" font-weight="900" fill="${W}">✓</text>
+        </g>
+      </g>`;
+    });
+  }
+
+  // ==================== s10: Level Up -> Skill Asset Package ====================
+  else if (id === "s10") {
+    svg += sceneHeader("LEVEL UP / 复利思维", "多次做，别重写 Prompt", lt);
+    const topSp = spring(lt - 0.12, 200, 16);
+    const arr = easeOutCubic((p - 0.22) / 0.12);
+    const boxSp = spring((p - 0.30) * dur, 200, 15);
+    svg += `
+      <g opacity="${clamp(topSp)}" transform="translate(0, ${((1 - topSp) * 28).toFixed(1)})">
+        <rect x="64" y="476" width="430" height="172" rx="26" fill="${BG}" stroke="#A6A092" stroke-width="3.5"/>
+        <text x="279" y="546" text-anchor="middle" font-size="40" font-weight="900" fill="${G}">做 1 次</text>
+        <text x="279" y="604" text-anchor="middle" font-size="30" font-weight="600" fill="${G}">靠多轮对话打磨</text>
+        <text x="540" y="578" text-anchor="middle" font-size="48" font-weight="900" fill="${R}">→</text>
+        <rect x="586" y="476" width="430" height="172" rx="26" fill="${W}" stroke="${R}" stroke-width="4.5"/>
+        <text x="801" y="546" text-anchor="middle" font-size="40" font-weight="900" fill="${R}">做 10 次</text>
+        <text x="801" y="604" text-anchor="middle" font-size="30" font-weight="800" fill="${K}">沉淀成专属 Skill</text>
+      </g>
+      <line x1="540" y1="658" x2="540" y2="${(658 + 60 * arr).toFixed(1)}" stroke="${R}" stroke-width="6" opacity="${arr}"/>
+      <polygon points="524,710 556,710 540,730" fill="${R}" opacity="${arr > 0.8 ? 1 : 0}"/>
+
+      <g transform="translate(540, 1018) scale(${(0.86 + 0.14 * boxSp).toFixed(3)}) translate(-540, -1018)" opacity="${clamp(boxSp)}">
+        <rect x="64" y="750" width="952" height="538" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <path d="M64 780 Q64 750 94 750 L986 750 Q1016 750 1016 780 L1016 842 L64 842 Z" fill="${K}"/>
+        <text x="108" y="810" font-size="34" font-weight="900" fill="${W}" letter-spacing="1.5">专属 PPT SKILL / PROJECT 资产包</text>
+        <rect x="108" y="886" width="414" height="162" rx="22" fill="${BG}"/>
+        <text x="315" y="954" text-anchor="middle" font-size="34" font-weight="900" fill="${K}">① 收集与来源红线</text>
+        <text x="315" y="1006" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">无出处数字一律拦截</text>
+        <rect x="558" y="886" width="414" height="162" rx="22" fill="${BG}"/>
+        <text x="765" y="954" text-anchor="middle" font-size="34" font-weight="900" fill="${K}">② 品牌配色与字体</text>
+        <text x="765" y="1006" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">固定 3 色与字号层级</text>
+        <rect x="108" y="1084" width="414" height="162" rx="22" fill="${BG}"/>
+        <text x="315" y="1152" text-anchor="middle" font-size="34" font-weight="900" fill="${K}">③ 30 字 + 去 AI 味</text>
+        <text x="315" y="1204" text-anchor="middle" font-size="26" font-weight="600" fill="${G}">禁用词表 + 备注分流</text>
+        <rect x="558" y="1084" width="414" height="162" rx="22" fill="#FFF0EB" stroke="${R}" stroke-width="3.5"/>
+        <text x="765" y="1152" text-anchor="middle" font-size="34" font-weight="900" fill="${R}">④ 排版脚本 + 自检</text>
+        <text x="765" y="1204" text-anchor="middle" font-size="26" font-weight="700" fill="${K}">直出 .pptx + 转图校验</text>
+      </g>`;
+    svg += hardNote(1340, "注意点", "先手工跑通 2-3 次再封装，把返工坑写进规则", spring((p - 0.62) * dur, 210, 15));
+  }
+
+  // ==================== s11: Full Cheat Sheet with Traveling Signal ====================
+  else if (id === "s11") {
+    svg += sceneHeader("CHEAT SHEET / 一图收藏", "GPT 做 PPT 完整闭环地图", lt);
+    const rows = [
+      { n: "01", t: "收集资料", k: "联网三维度 · 必须带来源链接" },
+      { n: "02", t: "信息提炼", k: "定听众决策 · 按 3 问题做减法" },
+      { n: "03", t: "整理逻辑", k: "一页一结论 · 标明视觉形式" },
+      { n: "04", t: "精简打磨", k: "单页 ≤30 字 · 删光 AI 腔" },
+      { n: "05", t: "锁定风格", k: "≤3 色 + 字号层级 · 不中途换版" },
+      { n: "06", t: "直出验收", k: "GPT 直出 + 转图自检 + 5 分钟终审" },
+    ];
+    rows.forEach((r, i) => {
+      const y = 472 + i * 144;
+      const sp = spring((p - (0.04 + i * 0.08)) * dur, 220, 16);
+      const isLit = p >= (0.04 + i * 0.08) && p < (0.14 + i * 0.08);
+      svg += `<g transform="translate(${((1 - sp) * 40).toFixed(1)}, 0)" opacity="${clamp(sp)}">
+        <rect x="64" y="${y}" width="952" height="122" rx="24" fill="${W}" stroke="${isLit || i === 5 ? R : K}" stroke-width="${isLit ? 5.5 : 4}"/>
+        <rect x="90" y="${y + 24}" width="76" height="74" rx="16" fill="${isLit || i === 5 ? R : K}"/>
+        <text x="128" y="${y + 74}" text-anchor="middle" font-size="32" font-weight="900" fill="${W}">${r.n}</text>
+        <text x="196" y="${y + 75}" font-size="36" font-weight="900" fill="${K}">${r.t}</text>
+        <text x="384" y="${y + 74}" font-size="30" font-weight="700" fill="${G}">${r.k}</text>
+      </g>`;
+    });
+    const lp = spring((p - 0.62) * dur, 220, 14);
+    svg += `<g transform="translate(540, 1412) scale(${(0.84 + 0.16 * lp).toFixed(3)}) translate(-540, -1412)" opacity="${clamp(lp)}">
+      <rect x="64" y="1352" width="952" height="120" rx="60" fill="${R}"/>
+      <text x="540" y="1426" text-anchor="middle" font-size="36" font-weight="900" fill="${W}">↻ 跑通 2-3 次 → 立刻封装成专属 Skill 复用</text>
+    </g>`;
+  }
+
+  // ==================== s12: Finale Triangle + Counting 10x ====================
+  else if (id === "s12") {
+    svg += sceneHeader("SUMMARY / 核心心法", "从单次干活到专属团队", lt);
+    const e1 = easeOutCubic((p - 0.08) / 0.16);
+    const e2 = easeOutCubic((p - 0.20) / 0.16);
+    const e3 = easeOutCubic((p - 0.32) / 0.16);
+    const bl = spring((p - 0.12) * dur, 210, 15);
+    const br = spring((p - 0.28) * dur, 210, 15);
+    const tp = spring((p - 0.46) * dur, 210, 15);
+    const cnt = Math.round(10 * easeOutCubic((p - 0.56) / 0.22));
+
+    svg += `
+      <line x1="256" y1="1220" x2="${(256 + 568 * e1).toFixed(1)}" y2="1220" stroke="${R}" stroke-width="11" stroke-linecap="round" opacity="${e1}"/>
+      <line x1="256" y1="1220" x2="${(256 + 284 * e2).toFixed(1)}" y2="${(1220 - 540 * e2).toFixed(1)}" stroke="${R}" stroke-width="11" stroke-linecap="round" opacity="${e2}"/>
+      <line x1="824" y1="1220" x2="${(824 - 284 * e3).toFixed(1)}" y2="${(1220 - 540 * e3).toFixed(1)}" stroke="${R}" stroke-width="11" stroke-linecap="round" opacity="${e3}"/>
+      <g opacity="${easeOutCubic((p - 0.54) / 0.15)}">
+        <text x="540" y="1028" text-anchor="middle" font-size="112" font-weight="900" fill="${K}">${cnt}×</text>
+        <text x="540" y="1090" text-anchor="middle" font-size="34" font-weight="800" fill="${G}">流程 × Skill 复利</text>
+      </g>
+      <g transform="translate(256, 1220) scale(${(0.65 + 0.35 * bl).toFixed(3)}) translate(-256, -1220)" opacity="${clamp(bl)}">
+        <rect x="64" y="1144" width="384" height="152" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="256" y="1210" text-anchor="middle" font-size="40" font-weight="900" fill="${K}">单次 · 6 步流程</text>
+        <text x="256" y="1264" text-anchor="middle" font-size="28" font-weight="600" fill="${G}">把单次质量拉满</text>
+      </g>
+      <g transform="translate(824, 1220) scale(${(0.65 + 0.35 * br).toFixed(3)}) translate(-824, -1220)" opacity="${clamp(br)}">
+        <rect x="632" y="1144" width="384" height="152" rx="30" fill="${W}" stroke="${K}" stroke-width="4.5"/>
+        <text x="824" y="1210" text-anchor="middle" font-size="40" font-weight="900" fill="${K}">多次 · 专属 Skill</text>
+        <text x="824" y="1264" text-anchor="middle" font-size="28" font-weight="600" fill="${G}">把经验固化成资产</text>
+      </g>
+      <g transform="translate(540, 680) scale(${(0.65 + 0.35 * tp).toFixed(3)}) translate(-540, -680)" opacity="${clamp(tp)}">
+        <rect x="300" y="596" width="480" height="168" rx="84" fill="${R}"/>
+        <text x="540" y="670" text-anchor="middle" font-size="48" font-weight="900" fill="${W}">你 · 把关人</text>
+        <text x="540" y="726" text-anchor="middle" font-size="28" font-weight="700" fill="rgba(255,255,255,0.94)">定标准 · 核底线 · 管团队</text>
+      </g>`;
+  }
+
+  // ==================== s13: 7s CTA Comment Box ("评论区留个 skill") ====================
+  else if (id === "s13") {
+    svg += sceneHeader("GET THE SKILL / 获取同款", "想用 Agent 做出同款视频？", lt);
+    const boxSp = spring(lt - 0.15, 210, 15);
+    const typed = "skill";
+    const typedN = Math.floor(clamp((p - 0.24) / 0.24) * typed.length);
+    const shown = typed.slice(0, typedN);
+    const blink = Math.floor(lt * 5) % 2 === 0 && p < 0.56 ? 1 : 0;
+    const sent = p >= 0.52;
+    const badgeSp = spring((p - 0.54) * dur, 220, 14);
+
+    svg += `
+      <g transform="translate(540, 740) scale(${(0.82 + 0.18 * boxSp).toFixed(3)}) translate(-540, -740)" opacity="${clamp(boxSp)}">
+        <rect x="64" y="540" width="952" height="390" rx="34" fill="${W}" stroke="${K}" stroke-width="5"/>
+        <text x="114" y="618" font-size="32" font-weight="800" fill="${G}">💬 评论区留言</text>
+        <rect x="114" y="660" width="676" height="128" rx="64" fill="${BG}" stroke="${sent ? R : K}" stroke-width="4.5"/>
+        <text x="172" y="742" font-family="SF Mono, Menlo, monospace" font-size="58" font-weight="900" fill="${R}">${shown}<tspan fill="${K}" opacity="${blink}">|</tspan></text>
+        <circle cx="882" cy="724" r="64" fill="${sent ? R : K}"/>
+        <text x="882" y="738" text-anchor="middle" font-size="34" font-weight="900" fill="${W}">发送</text>
+        <text x="114" y="876" font-size="30" font-weight="700" fill="${G}">含：6 步 SOP · 免费/克隆双配音指南 · 开源模板代码</text>
+      </g>
+
+      <g transform="translate(540, 1130) scale(${(0.75 + 0.25 * badgeSp).toFixed(3)}) translate(-540, -1130)" opacity="${clamp(badgeSp)}">
+        <rect x="64" y="1028" width="952" height="204" rx="34" fill="${R}"/>
+        <text x="540" y="1116" text-anchor="middle" font-size="48" font-weight="900" fill="${W}">评论区留下「skill」</text>
+        <text x="540" y="1184" text-anchor="middle" font-size="32" font-weight="700" fill="rgba(255,255,255,0.94)">我把这套完整工作流整理出来分享给大家</text>
+      </g>
+    `;
+  }
+
+  return { svg, camScale, camX, camY };
+}
+
+window.initAvatar = function(b64) {
+  document.getElementById("avatar-img").src = "data:image/jpeg;base64," + b64;
+};
+
+window.setRemotionFrame = function({ sceneId, sceneNum, localT, sceneDur, globalProgress, caption, lv, t }) {
+  // Sight-leads-sound: advance visual timeline slightly (+0.45s on s02..s12) so graphics snap right ahead of speech!
+  const leadVisual = (sceneId === "s01" || sceneId === "s13") ? localT : Math.min(sceneDur, localT + 0.55);
+  const p = clamp(leadVisual / sceneDur);
+  const res = renderWorld(sceneId, leadVisual, sceneDur, p);
+  document.getElementById("world-svg").innerHTML = res.svg;
+  document.getElementById("camera-world").style.transform =
+    `translate(${res.camX.toFixed(1)}px, ${res.camY.toFixed(1)}px) scale(${res.camScale.toFixed(4)})`;
+
+  document.getElementById("ep-badge").textContent = String(sceneNum).padStart(2, "0");
+  document.getElementById("subtitle-text").textContent = caption || "";
+  document.getElementById("progress-fill").style.width = `${(clamp(globalProgress) * 100).toFixed(2)}%`;
+
+  const outer = document.getElementById("pip-outer");
+  const inner = document.getElementById("pip-inner");
+  outer.style.transform = `scale(${(1 + lv * 0.24).toFixed(3)})`;
+  outer.style.opacity = String(Math.min(0.88, lv * 0.98).toFixed(3));
+  inner.style.transform = `scale(${(1 + lv * 0.13).toFixed(3)})`;
+  inner.style.opacity = String(Math.min(0.7, lv * 0.8).toFixed(3));
+  [0, 1.4, 2.7, 4.1].forEach((ph, i) => {
+    const w = 0.5 + 0.5 * Math.sin(t * 16 + ph);
+    document.getElementById("eq" + i).style.height = Math.round(5 + lv * (11 + w * 9)) + "px";
+  });
+};
+</script>
+</body>
+</html>

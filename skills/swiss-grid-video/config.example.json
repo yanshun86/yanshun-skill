@@ -1,0 +1,32 @@
+{
+  "brand": {
+    "badge": "01",
+    "name": "你的账号名",
+    "handle": "@YOURHANDLE",
+    "footerLeft": "每天一个实战工作流",
+    "footerRight": "@YOURHANDLE",
+    "avatarPath": "assets/avatar.jpg",
+    "avatarLabel": "主讲人"
+  },
+  "palette": {
+    "bg": "#F8F6EE",
+    "ink": "#111111",
+    "accent": "#E8431A",
+    "muted": "#5C5952"
+  },
+  "tts": {
+    "engine": "edge",
+    "edgeVoice": "zh-CN-YunxiNeural",
+    "edgeRate": "+18%",
+    "volcResourceId": "seed-icl-2.0",
+    "volcSpeed": 1.2
+  },
+  "video": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "crf": 22,
+    "audioBitrate": "128k",
+    "targetLufs": -14
+  }
+}
