@@ -46,7 +46,23 @@ flowchart TD
 
 ---
 
-## 三、声学与导出硬标准
+## 三、Whisper 语音时间戳校准流程（强制）
+
+所有真人实拍、混剪或配音成片，**严禁凭估算写死时间轴**，必须执行以下校准流程：
+
+1. **提取/校准字级时间戳**：
+   ```bash
+   yanshun-whisper <音视频文件路径> -o <输出目录>
+   ```
+   调用本地 Apple Silicon GPU 加速的 `mlx-whisper`（`whisper-large-v3-turbo`，已内置 `condition_on_previous_text=False` 与尾部零时长幻觉过滤），生成 `<base>.whisper.json`（含逐句 `segments[]` 与逐词 `words[]`）和 `<base>.whisper.srt`。
+2. **脚本直读驱动渲染**：在 Playwright 渲染脚本（`render_*.mjs`）中直接读取 `<base>.whisper.json` 传入页面 `initEditorial({ frames, segments })`：
+   - **字幕全程在线**：无论大口播、全屏冲击字卡还是 PiP 阶段，统一由 `segments[]` 实时驱动，不留无字幕空档；
+   - **切场与动作卡点**：每个转场切点、卡片弹出、手绘划线、降维变暗、盖章与棚拍 SFX 均绑定到对应 `segment.start / word.start`，确保“话未说完绝不提前切场”。
+3. **关键帧对齐复核**：按转场后/动作触发后 `0.2s–0.5s` 抽帧，用 `read_file` 核对画面与当前字幕文本是否完全对应。
+
+---
+
+## 四、声学与导出硬标准
 
 - **配音建议**：开头 15 秒与结尾 15 秒优先使用真人麦原声实录，中段长讲解可用短句气口分段配音。
 - **BGM 配方**：真实器乐底轨挂载 `lowpass=f=580, equalizer=f=110:t=q:w=1.0:g=4.0`，停顿间隙稳在 **`-31 dB ~ -32 dB`**（与人声差 `12–14 dB`），说话时轻侧链闪避（`ratio=2.2`）。
