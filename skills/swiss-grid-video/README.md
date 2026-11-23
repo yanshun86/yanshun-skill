@@ -1,117 +1,119 @@
-# Swiss Grid Video · 9:16 瑞士网格科普动效视频工作流
+# Swiss Grid Video · 双端瑞士网格动效视频工作流（v0.3）
 
-把你的方法论、AI 工作流或深度复盘，通过 Agent 自动拆解并渲染成 **Remotion 级弹簧动效 + 圆形真人头像声波环 + 逐字卡点字幕 + 真实音效** 的 9:16 竖屏讲解视频。
+把方法论、AI 实测录屏或工作流复盘，通过 Agent 自动拆解并渲染成 **16:9 横屏深度版（5–7 分钟）** 与 **9:16 竖屏快节奏版（60–90 秒）** 的高清成片：**零 PPT 僵硬感 + 真人头像实时声波环 + 实况录屏推拉放大 + 三段式动态 BGM + 词级卡点字幕**。
 
 ---
 
-## 一、环境依赖（一次性安装）
+## 一、成品效果预览
+
+| 16:9 情景动画与对比布局 | 16:9 结尾「截屏带走 + 投票互动」 | 9:16 竖屏安全区与高对比卡 |
+| :---: | :---: | :---: |
+| ![16:9 情景动画](./assets/preview_16x9_scenario.png) | ![16:9 结尾带走与互动](./assets/preview_16x9_cta.png) | ![9:16 竖屏成片](./assets/preview_9x16_hook.png) |
+
+---
+
+## 二、完整制作流程图与视觉安全区
+
+```mermaid
+flowchart LR
+    S1["1. 口播锁稿<br/>短句气口分段"] --> S2["2. 语音合成<br/>1.0x横屏 / 1.12x竖屏<br/>生成 words[] + .srt"]
+    S2 --> S3["3. 录屏素材处理<br/>30fps代理 + 1:1裁切<br/>逐张读图验坐标"]
+    S3 --> S4["4. 动效渲染<br/>第0帧非空 + 逐句触发<br/>Playwright 4进程并发"]
+    S4 --> S5["5. 三段式混音<br/>1.4kHz挖坑 + 侧链闪避<br/>BGM稳在-33dB"]
+    S5 --> S6["6. 抽帧与电平验收<br/>MP4 < 20MB + faststart"]
+```
+
+### 双端安全区构图规范
+
+```text
++---------------------------------------------------------------+ 1920x1080 (16:9)
+| [品牌 · 章节胶囊]                           ( 112px 真人头像 ) |  y=24..96
+| +-----------------------------------------------------------+ |
+| |               主内容舞台（flex: 1 撑满纵向空间）            | |  y=98..958
+| |     真实录屏推拉放大 / 情景动画卡片 / 放大镜逐项检查        | |
+| +-----------------------------------------------------------+ |
+|                 [ 词级同步高亮字幕胶囊 ]     [@账号名 深蓝金标] |  y=960..1060
++---------------------------------------------------------------+
+
++---------------------------------+ 1080x1920 (9:16 竖屏避让平台UI)
+|  (避让顶部状态栏 y=0..105)       |
+|  [品牌 · 章节]     (104px 头像)  |  y=105..220
+|  +---------------------------+  |
+|  |   主内容卡片（纵向撑满）    |  |  y=245..1430
+|  |   大字标题 38-58px        |  |
+|  +---------------------------+  |
+|     [ 居中高亮短句字幕 ]         |  bottom=300
+|         [@账号名 居中徽章]       |  bottom=220 (避让底部文案与右侧赞评)
++---------------------------------+
+```
+
+---
+
+## 三、环境依赖（一次性安装）
 
 ```bash
 # 1. Node.js 20+ & FFmpeg（macOS）
 brew install node ffmpeg
 
-# 2. Playwright Chromium（用于 1080x1920 逐帧无损渲染）
+# 2. Playwright Chromium（用于 16:9 / 9:16 逐帧无损渲染）
 npm install playwright
 npx playwright install chromium
 ```
 
 ---
 
-## 二、三种配音方案完整配置指南（按门槛从低到高）
+## 四、三种配音方案配置指南（按门槛从低到高）
 
-复制 `.env.example` 为 `.env`，`config.example.json` 为 `config.json`（均已在 `.gitignore` 中，不会被提交到 Git）。
+复制 `.env.example` 为 `.env`，`config.example.json` 为 `config.json`（均已在 `.gitignore` 中，绝不会提交到 Git）。
 
 ### 方案 A：完全免费、零 API Key（Edge TTS · 新手首选）
-
-不需要注册任何账号、不需要信用卡，直接调用微软 Edge 神经语音并自动产出逐字时间戳：
 
 ```bash
 pip install edge-tts
 ```
-
-在 `config.json` 中配置：
 ```json
 {
   "tts": {
     "engine": "edge",
     "voice": "zh-CN-YunxiNeural",
-    "rate": "+18%"
+    "rate": "+12%"
   }
 }
 ```
-常用自然中文音色推荐：
-- 男声知性讲解：`zh-CN-YunxiNeural` / `zh-CN-YunjianNeural`
-- 女声清亮干练：`zh-CN-XiaoxiaoNeural` / `zh-CN-XiaoyiNeural`
-
-运行示例：
-```bash
-python3 scripts/tts-edge.py ./my-episode
-```
-
----
+常用自然中文音色：`zh-CN-YunxiNeural`、`zh-CN-YunjianNeural`、`zh-CN-XiaoxiaoNeural`。
 
 ### 方案 B：本机免费离线克隆自己的声音（Apple Silicon Mac · Qwen3-TTS MLX）
 
-完全在本地 Apple Silicon GPU 跑通，**零费用、声音样本不上传云端**。
+完全在本地 GPU 运行，**零费用、声音样本不上云**（需准备 5–10 秒干净干声 + 对应文案）：
+```bash
+python3 -m venv .venv-voice && source .venv-voice/bin/activate
+pip install mlx-audio soundfile numpy
+```
+> 提示：中英混排时给 TTS 的文本需自动去掉中英之间空格（如 `去AI味`），避免 0.6B 小模型卡顿。
 
-1. **安装本地 MLX 语音环境**：
-   ```bash
-   python3 -m venv .venv-voice
-   source .venv-voice/bin/activate
-   pip install mlx mlx-audio numpy
-   ```
-2. **下载 4-bit 量化模型**（约 0.5 GB，支持中文克隆）：
-   - HuggingFace：`mlx-community/Qwen3-TTS-12Hz-0.6B-Base-4bit`
-3. **准备你的本人干声样本**：
-   - 在安静书房用手机或麦克风录 **8–15 秒** 自然连续讲解的干声（无背景音乐、无明显回声），保存为单声道 WAV（如 `assets/my-voice-ref.wav`）；
-   - 逐字记下这段录音的准确文字作为 `ref_text`（标点准确能显著提升断句自然度）。
-4. **避坑提示**：
-   - 0.6B 本地模型在遇到“中英夹杂 + 空格”（如 `去 AI 味`）时偶尔会有轻微气口停顿；喂给模型前务必去掉中英之间的空格（如 `去AI味`），屏幕上仍显示带空格的标准字幕；
-   - 建议先以 1.0x 生成，再用 FFmpeg `atempo=1.2` 不变调加速。
+### 方案 C：云端高自然度克隆（火山引擎 / 豆包语音 ICL 2.0 · 推荐日更）
 
----
-
-### 方案 C：云端高自然度克隆自己的声音（火山引擎 / 豆包语音 ICL 2.0 · 推荐日更）
-
-中英混排（GPT / Markdown / Skill / Python）连读最自然，支持原生 `1.2x` 语速不变调，且直接返回毫秒级逐字时间戳 `words[]` 用于精确字幕卡点。
-
-1. **获取本人复刻音色 ID**：
-   - 登录火山引擎语音技术控制台 → 进入「**声音复刻（豆包语音 ICL 2.0）**」；
-   - 按提示朗读 10–20 秒完成声音复刻，拿到以 `S_` 开头的专属音色 ID（例如 `S_xxxxxxxxx`）；
-   - 在控制台创建 API Key（或 AppId + AccessToken），并确认已开通资源 ID **`seed-icl-2.0`**（旧版 1.0 为 `volc.megatts.default`）。
-2. **填入本地 `.env`（绝不提交到 Git）**：
-   ```env
-   VOLC_TTS_API_KEY=你的火山API_KEY
+1. 在火山引擎控制台开通语音合成并完成声音复刻，获取 `APP_ID`、`ACCESS_TOKEN` 与你的音色 ID。
+2. 在 `.env` 中填入：
+   ```dotenv
+   VOLC_TTS_APP_ID=你的AppID
+   VOLC_TTS_ACCESS_TOKEN=你的AccessToken
+   VOLC_TTS_VOICE=你的音色ID
    VOLC_TTS_RESOURCE_ID=seed-icl-2.0
-   VOLC_TTS_VOICE=S_你的复刻音色ID
-   VOLC_TTS_SPEED=20
+   VOLC_TTS_SPEED=0
    ```
-   *(说明：`VOLC_TTS_SPEED=20` 对应原生 `1.2x` 语速，范围 `-50 ~ 100`，`0` 为原速。)*
+3. **实战经验**：
+   - `seed-icl-2.0` 音色相似度极高，但**不响应 `context_texts` 情绪标签**；把稿子拆成 20–40 个短句气口分段合成可显著改善呼吸节奏；
+   - 若开头钩子与结尾金句需要极强真人情绪张力，推荐采用 **「首尾 15 秒手机原声实录 + 中段克隆音色讲解」** 的混合录制模式；
+   - 16:9 深度版建议 `VOLC_TTS_SPEED=0`（1.0x 自然语速），9:16 竖屏短片建议 `VOLC_TTS_SPEED=12`（~1.12x 明快节奏）。
 
 ---
 
-## 三、圆形真人头像 + 实时声波环配置
+## 五、三段式动态 BGM 与质检清单
 
-1. 准备一张 `1:1` 清晰正面半身肖像（建议 500×500 以上，暖光背景最搭米白网格），放到本地 `assets/avatar.jpg`（已在 `.gitignore` 中）；
-2. 在 `config.json` 中设置 `"avatar": "assets/avatar.jpg"`（设为 `""` 则自动隐藏头像）；
-3. 声波环由干净人声轨的逐帧 RMS 振幅实时驱动，开口跳动、停顿静止，完全不受背景音效干扰。
-
----
-
-## 四、真实音效（SFX）接入规范
-
-- **严禁使用代码合成白噪声/正弦波扫频**，容易与人声频段打架；
-- 建议使用真实采样的短促 UI 音效（放入本地 `assets/sfx/`）：
-  - `typing.mp3`（打字机输入，音量 `0.25`）
-  - `click-soft.mp3`（发送/点击，音量 `0.32`）
-  - `whoosh-short.mp3`（切幕微转场，音量 `0.16`）
-  - `pop.mp3` / `chime.mp3`（卡片弹出/验收提示，音量 `0.18`）
-- 混音统一加 `highpass=f=120` 低切与 `alimiter=limit=0.95` 限幅，确保清晰托底、绝不抢人声。
-
----
-
-## 五、配合 Agent 一句话开工
-
-把本 Skill 挂载到你的 Agent（Claude Code / Codex / Antigravity）后，直接说：
-
-> 「用 `swiss-grid-video` 工作流，帮我做一个 9:16 竖屏讲解视频，主题是《XXXX》，先按 6 步标准给我分幕脚本和每幕的视觉隐喻表，我确认后再配音渲染。」
+- **三段式 BGM 节奏**：
+  1. `0:00–0:45`（钩子期）：104 BPM 微悬疑脉冲 + 低音心跳；
+  2. 中段（实操拆解）：92 BPM 轻快拨弦律动，在核心反转金句前留 **3–6 秒抽空留白** + `Impact Bass` 切入下一轮；
+  3. 结尾（给工具 + CTA）：76 BPM 温暖明亮钢琴和弦收束。
+- **混音铁律**：BGM 在 `1.4kHz` 挖坑 `-5.0 dB` + 人声侧链闪避，说话时 BGM 均响保持在 `-33 dB` 左右，用 `ffmpeg -af volumedetect` 实测确认，绝不靠猜。
+- **交付前 4 项必检**：第 0 帧非空 · 所有录屏裁切 `read_file` 对图 · `.srt` 字幕零半词截断 · MP4 `< 20MB`（`yuv420p` + `faststart`）。
